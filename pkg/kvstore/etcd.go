@@ -814,13 +814,13 @@ reList:
 				scopedLog.Debugf("Emitting list result as %s event for %s=%s", t, key.Key, key.Value)
 			}
 
-			queueStart := spanstat.Start()
-			w.Events <- KeyValueEvent{
+			if ok := w.emit(ctx, KeyValueEvent{
 				Key:   string(key.Key),
 				Value: key.Value,
 				Typ:   t,
+			}); !ok {
+				return
 			}
-			trackEventQueued(string(key.Key), t, queueStart.End(true).Total())
 		}
 
 		nextRev := revision + 1
@@ -837,15 +837,16 @@ reList:
 			if traceEnabled {
 				scopedLog.Debugf("Emitting EventTypeDelete event for %s", k)
 			}
-
-			queueStart := spanstat.Start()
-			w.Events <- event
-			trackEventQueued(k, EventTypeDelete, queueStart.End(true).Total())
+			if ok := w.emit(ctx, event); !ok {
+				return
+			}
 		})
 
 		// Only send the list signal once
 		if !listSignalSent {
-			w.Events <- KeyValueEvent{Typ: EventTypeListDone}
+			if ok := w.emit(ctx, KeyValueEvent{Typ: EventTypeListDone}); !ok {
+				return
+			}
 			listSignalSent = true
 		}
 
@@ -927,10 +928,9 @@ reList:
 					if traceEnabled {
 						scopedLog.Debugf("Emitting %s event for %s=%s", event.Typ, event.Key, event.Value)
 					}
-
-					queueStart := spanstat.Start()
-					w.Events <- event
-					trackEventQueued(string(ev.Kv.Key), event.Typ, queueStart.End(true).Total())
+					if ok := w.emit(ctx, event); !ok {
+						return
+					}
 				}
 			}
 		}
