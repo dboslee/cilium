@@ -95,10 +95,19 @@ const (
 	//		preferred endpoints from local cluster if available
 	//  - remote
 	// 		preferred endpoints from remote cluster if available
+	// - clusters
+	// 		preferred endpoints from select clusters if available. Clusters may
+	// 		be specified with the ServiceClusterAffinity /
+	// 		ServiceClusterAffinityAlias annotations
 	//  - none (default)
 	//		no preference. Default behavior if this annotation does not exist
 	ServiceAffinity      = ServicePrefix + "/affinity"
 	ServiceAffinityAlias = Prefix + "/service-affinity"
+
+	// ServiceClusterAffinity / ServiceClusterAffinityAlias annotations determine
+	// the clusters from which endpoints will be preferred if available.
+	ServiceClusterAffinity      = ServicePrefix + "/cluster-affinity"
+	ServiceClusterAffinityAlias = Prefix + "/service-cluster-affinity"
 
 	// ProxyVisibility / ProxyVisibilityAlias is the annotation name used to
 	// indicate whether proxy visibility should be enabled for a given pod (i.e.,

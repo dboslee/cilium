@@ -490,11 +490,20 @@ func (s *ServiceCache) correlateEndpoints(id ServiceID) (*Endpoints, bool) {
 	svc, svcFound := s.services[id]
 
 	hasLocalEndpoints := localEndpoints != nil
+
+	var preferredLocal bool
+	if svcFound && svc.IncludeExternal {
+		preferredLocal = svc.ServiceAffinity == serviceAffinityCluster
+		if svc.ServiceAffinity == serviceAffinityCluster {
+			preferredLocal = slices.Contains(svc.ClusterAffinity, id.Cluster)
+		}
+	}
+
 	if hasLocalEndpoints {
 		localEndpoints = s.filterEndpoints(localEndpoints, svc)
 
 		for ip, e := range localEndpoints.Backends {
-			e.Preferred = svcFound && svc.IncludeExternal && svc.ServiceAffinity == serviceAffinityLocal
+			e.Preferred = preferredLocal
 			endpoints.Backends[ip] = e.DeepCopy()
 		}
 	}
@@ -508,6 +517,11 @@ func (s *ServiceCache) correlateEndpoints(id ServiceID) (*Endpoints, bool) {
 			// EndpointSlices so no need to search the endpoints of a particular
 			// EndpointSlice.
 			for clusterName, remoteClusterEndpoints := range externalEndpoints.endpoints {
+				var preferredRemote bool
+				preferredRemote = svc.ServiceAffinity == serviceAffinityRemote
+				if svc.ServiceAffinity == serviceAffinityCluster {
+					preferredRemote = slices.Contains(svc.ClusterAffinity, clusterName)
+				}
 				for ip, e := range remoteClusterEndpoints.Backends {
 					if _, ok := endpoints.Backends[ip]; ok {
 						log.WithFields(logrus.Fields{
@@ -516,10 +530,10 @@ func (s *ServiceCache) correlateEndpoints(id ServiceID) (*Endpoints, bool) {
 							logfields.IPAddr:       ip,
 							"cluster":              clusterName,
 						}).Warning("Conflicting service backend IP")
-					} else {
-						e.Preferred = svc.ServiceAffinity == serviceAffinityRemote
-						endpoints.Backends[ip] = e.DeepCopy()
+						continue
 					}
+					e.Preferred = preferredRemote
+					endpoints.Backends[ip] = e.DeepCopy()
 				}
 			}
 		}

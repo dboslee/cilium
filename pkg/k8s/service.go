@@ -28,9 +28,10 @@ import (
 )
 
 const (
-	serviceAffinityNone   = ""
-	serviceAffinityLocal  = "local"
-	serviceAffinityRemote = "remote"
+	serviceAffinityNone    = ""
+	serviceAffinityLocal   = "local"
+	serviceAffinityRemote  = "remote"
+	serviceAffinityCluster = "cluster"
 )
 
 func getAnnotationIncludeExternal(svc *slim_corev1.Service) bool {
@@ -66,6 +67,17 @@ func getAnnotationServiceAffinity(svc *slim_corev1.Service) string {
 	}
 
 	return serviceAffinityNone
+}
+
+func getAnnotationServiceClusterAffinity(svc *slim_corev1.Service) []string {
+	if !getAnnotationIncludeExternal(svc) {
+		return []string{}
+	}
+	value, ok := annotation.Get(svc, annotation.ServiceClusterAffinity, annotation.ServiceAffinityAlias, annotation.ServiceClusterAffinityAlias)
+	if !ok {
+		return []string{}
+	}
+	return strings.Split(strings.ToLower(value), ",")
 }
 
 func getAnnotationTopologyAwareHints(svc *slim_corev1.Service) bool {
@@ -185,6 +197,7 @@ func ParseService(svc *slim_corev1.Service, nodeAddressing types.NodeAddressing)
 	svcInfo.IncludeExternal = getAnnotationIncludeExternal(svc)
 	svcInfo.Shared = getAnnotationShared(svc)
 	svcInfo.ServiceAffinity = getAnnotationServiceAffinity(svc)
+	svcInfo.ClusterAffinity = getAnnotationServiceClusterAffinity(svc)
 
 	if svc.Spec.SessionAffinity == slim_corev1.ServiceAffinityClientIP {
 		svcInfo.SessionAffinity = true
@@ -330,6 +343,10 @@ type Service struct {
 	//
 	// Applicable values: local, remote, none (default).
 	ServiceAffinity string
+
+	// ClusterAffinity is the list of clusters with preffered endpoints used
+	// when the ServiceAffinity is set to "cluster".
+	ClusterAffinity []string
 
 	// ExtTrafficPolicy controls how backends are selected for North-South traffic.
 	// If set to "Local", only node-local backends are chosen.
