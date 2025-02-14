@@ -32,7 +32,7 @@ var (
 const (
 	// defaultStartTimeout is the amount of time allotted for start hooks. After
 	// this duration the context passed to the start hooks is cancelled.
-	defaultStartTimeout = 5 * time.Minute
+	defaultStartTimeout = 15 * time.Minute
 
 	// defaultStopTimeout is the amount of time allotted for stop hooks.
 	defaultStopTimeout = time.Minute
